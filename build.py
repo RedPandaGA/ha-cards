@@ -27,6 +27,7 @@ CARD_FILES = [
     "petlibro-feeder-card.js",
     "levoit-vital200s-card.js",
     "lg-washer-dryer-card.js",
+    "neakasa-m1-card.js",
 ]
 
 SRC_DIR  = Path(__file__).parent / "src"
