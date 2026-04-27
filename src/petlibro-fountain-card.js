@@ -25,13 +25,13 @@
  * device name differently.
  *
  * Example auto-derived IDs (prefix = "my_fountain"):
- *   sensor.my_fountain_current_weight_percent
+ *   sensor.my_fountain_remaining_water_2
  *   sensor.my_fountain_remaining_cleaning_days
- *   sensor.my_fountain_remaining_filter_days
+ *   sensor.my_fountain_remaining_filter_day
  *   sensor.my_fountain_today_s_water_consumption
  *   sensor.my_fountain_yesterday_s_water_consumption
- *   sensor.my_fountain_today_drinking_times
- *   sensor.my_fountain_yesterday_drinking_times
+ *   sensor.my_fountain_today_s_total_drinking_times
+ *   sensor.my_fountain_yesterday_s_total_drinking_times
  *   sensor.my_fountain_today_s_total_drinking_time
  *   sensor.my_fountain_today_s_average_drinking_time
  *   sensor.my_fountain_battery_ac           (Dockstream 2 Cordless only)
@@ -59,13 +59,13 @@
  * battery_max: 100             # max battery %                        default: 100
  *
  * # Optional — entity overrides (fix odd naming)
- * entity_weight_percent:            sensor.my_device_current_weight_percent
+ * entity_weight_percent:            sensor.my_device_remaining_water_2
  * entity_remaining_cleaning_days:   sensor.my_device_remaining_cleaning_days
- * entity_remaining_filter_days:     sensor.my_device_remaining_filter_days
+ * entity_remaining_filter_days:     sensor.my_device_remaining_filter_day
  * entity_today_drinking_amount:     sensor.my_device_today_s_water_consumption
  * entity_yesterday_drinking_amount: sensor.my_device_yesterday_s_water_consumption
- * entity_today_drinking_count:      sensor.my_device_today_drinking_times
- * entity_yesterday_drinking_count:  sensor.my_device_yesterday_drinking_times
+ * entity_today_drinking_count:      sensor.my_device_today_s_total_drinking_times
+ * entity_yesterday_drinking_count:  sensor.my_device_yesterday_s_total_drinking_times
  * entity_today_drinking_time:       sensor.my_device_today_s_total_drinking_time
  * entity_today_avg_time:            sensor.my_device_today_s_average_drinking_time
  * entity_battery_pct:               sensor.my_device_battery_ac
@@ -95,13 +95,13 @@
  *   entity_prefix: petlibro_dockstream_fountain_plwf116
  *   name: "Cat Fountain"
  *   show_reset_buttons: true
- *   entity_weight_percent: sensor.my_fountain_current_weight_percent
+ *   entity_weight_percent: sensor.my_fountain_remaining_water_2
  *   entity_remaining_cleaning_days: sensor.my_fountain_remaining_cleaning_days
- *   entity_remaining_filter_days: sensor.my_fountain_remaining_filter_days
+ *   entity_remaining_filter_days: sensor.my_fountain_remaining_filter_day
  *   entity_today_drinking_amount: sensor.my_fountain_today_s_water_consumption
  *   entity_yesterday_drinking_amount: sensor.my_fountain_yesterday_s_water_consumption
- *   entity_today_drinking_count: sensor.my_fountain_today_drinking_times
- *   entity_yesterday_drinking_count: sensor.my_fountain_yesterday_drinking_times
+ *   entity_today_drinking_count: sensor.my_fountain_today_s_total_drinking_times
+ *   entity_yesterday_drinking_count: sensor.my_fountain_yesterday_s_total_drinking_times
  *   entity_today_drinking_time: sensor.my_fountain_today_s_total_drinking_time
  *   entity_today_avg_time: sensor.my_fountain_today_s_average_drinking_time
  *   entity_battery_pct: sensor.my_fountain_battery_ac
@@ -140,13 +140,13 @@ class PetlibroFountainCard extends HTMLElement {
     const p = this._config.entity_prefix;
     const c = this._config;
     this._entities = {
-      weight_percent:            c.entity_weight_percent            || `sensor.${p}_current_weight_percent`,
+      weight_percent:            c.entity_weight_percent            || `sensor.${p}_remaining_water_2`,
       remaining_cleaning_days:   c.entity_remaining_cleaning_days   || `sensor.${p}_remaining_cleaning_days`,
-      remaining_filter_days:     c.entity_remaining_filter_days     || `sensor.${p}_remaining_filter_days`,
+      remaining_filter_days:     c.entity_remaining_filter_days     || `sensor.${p}_remaining_filter_day`,
       today_drinking_amount:     c.entity_today_drinking_amount     || `sensor.${p}_today_s_water_consumption`,
       yesterday_drinking_amount: c.entity_yesterday_drinking_amount || `sensor.${p}_yesterday_s_water_consumption`,
-      today_drinking_count:      c.entity_today_drinking_count      || `sensor.${p}_today_drinking_times`,
-      yesterday_drinking_count:  c.entity_yesterday_drinking_count  || `sensor.${p}_yesterday_drinking_times`,
+      today_drinking_count:      c.entity_today_drinking_count      || `sensor.${p}_today_s_total_drinking_times`,
+      yesterday_drinking_count:  c.entity_yesterday_drinking_count  || `sensor.${p}_yesterday_s_total_drinking_times`,
       today_drinking_time:       c.entity_today_drinking_time       || `sensor.${p}_today_s_total_drinking_time`,
       today_avg_time:            c.entity_today_avg_time            || `sensor.${p}_today_s_average_drinking_time`,
       battery_pct:               c.entity_battery_pct               || `sensor.${p}_battery_ac`,
@@ -596,8 +596,10 @@ class PetlibroFountainCard extends HTMLElement {
             <!-- Water consumed: today vs yesterday -->
             ${dualStatRow(
                 '💧', 'Water consumed',
-                todayAmount !== null ? Math.round(todayAmount) : null, todayUnit,
-                yestAmount  !== null ? Math.round(yestAmount)  : null, yestUnit
+                todayAmount !== null ? Math.round(todayAmount) : null,
+                yestAmount  !== null ? Math.round(yestAmount)  : null,
+                todayUnit,
+                yestUnit
               )}
 
             <!-- Drinking sessions: today vs yesterday -->
