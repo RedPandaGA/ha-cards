@@ -1,0 +1,10 @@
+{
+  "name": "redpanda-lovelace-cards",
+  "version": "1.0.0",
+  "description": "Custom Lovelace cards for Home Assistant — Petlibro, Levoit Vital 200S, LG Washer/Dryer",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "keywords": ["home-assistant", "lovelace", "hacs"],
+  "license": "MIT"
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Redpanda Lovelace Cards",
+  "content_in_root": false,
+  "lovelace_resources": [
+    {
+      "url": "/hacsfiles/redpanda-lovelace-cards/dist/redpanda-lovelace-cards.js",
+      "type": "module"
+    }
+  ],
+  "render_readme": true
+}
