@@ -605,8 +605,8 @@ class PetlibroFountainCard extends HTMLElement {
             <!-- Drinking sessions: today vs yesterday -->
             ${dualStatRow(
                 '🐾', 'Drinking sessions',
-                todayCount, '',
-                yestCount, ''
+                todayCount, yestCount,
+                '', ''
               )}
 
             <!-- Total drink time: today only -->
