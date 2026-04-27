@@ -31,7 +31,7 @@ CARD_FILES = [
 
 SRC_DIR  = Path(__file__).parent / "src"
 DIST_DIR = Path(__file__).parent / "dist"
-OUT_FILE = DIST_DIR / "redpanda-lovelace-cards.js"
+OUT_FILE = DIST_DIR / "ha-cards.js"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
