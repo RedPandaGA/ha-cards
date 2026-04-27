@@ -1,4 +1,4 @@
-// petlibro-fountain-card.js — v1.0.0
+// petlibro-fountain-card.js — v1.1.0
 /**
  * Petlibro Dockstream Fountain — Custom Lovelace Card
  *
@@ -12,7 +12,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * 1. Copy this file to /config/www/petlibro-fountain-card.js
  * 2. In HA: Settings → Dashboards → ⋮ → Resources → Add resource
- *    URL: /local/petlibro-fountain-card.js?v=100   Type: JavaScript module
+ *    URL: /local/petlibro-fountain-card.js?v=110   Type: JavaScript module
  *    (bump ?v= each time you update the file to bust HA's cache)
  * 3. Add a card to your dashboard (YAML mode) — see examples below.
  *
@@ -164,8 +164,7 @@ class PetlibroFountainCard extends HTMLElement {
 
   _state(entityId) {
     if (!this._hass || !entityId) return null;
-    const s = this._hass.states[entityId];
-    return s || null;
+    return this._hass.states[entityId] || null;
   }
 
   _val(entityId, fallback = null) {
@@ -225,87 +224,71 @@ class PetlibroFountainCard extends HTMLElement {
     const e = this._entities;
     const cfg = this._config;
 
-    // Data
-    const waterPct        = this._numVal(e.weight_percent, null);
-    const cleanDays       = this._numVal(e.remaining_cleaning_days, null);
-    const filterDays      = this._numVal(e.remaining_filter_days, null);
-    const batteryPct      = this._numVal(e.battery_pct, null);
-    const batteryState    = this._val(e.battery_state);
-    const todayAmount     = this._numVal(e.today_drinking_amount, null);
-    const yestAmount      = this._numVal(e.yesterday_drinking_amount, null);
-    const todayCount      = this._numVal(e.today_drinking_count, null);
-    const yestCount       = this._numVal(e.yesterday_drinking_count, null);
-    const todayTime       = this._numVal(e.today_drinking_time, null);
-    const todayAvg        = this._numVal(e.today_avg_time, null);
-    const barnError       = this._val(e.barn_door_error) === 'on';
-    const todayUnit       = this._unit(e.today_drinking_amount) || 'mL';
-    const yestUnit        = this._unit(e.yesterday_drinking_amount) || 'mL';
-    const waterUnit       = this._unit(e.weight_percent) || '%';
+    // ── Data ─────────────────────────────────────────────────────────────────
+    const waterPct     = this._numVal(e.weight_percent, null);
+    const cleanDays    = this._numVal(e.remaining_cleaning_days, null);
+    const filterDays   = this._numVal(e.remaining_filter_days, null);
+    const batteryPct   = this._numVal(e.battery_pct, null);
+    const batteryState = this._val(e.battery_state);
+    const todayAmount  = this._numVal(e.today_drinking_amount, null);
+    const yestAmount   = this._numVal(e.yesterday_drinking_amount, null);
+    const todayCount   = this._numVal(e.today_drinking_count, null);
+    const yestCount    = this._numVal(e.yesterday_drinking_count, null);
+    const todayTime    = this._numVal(e.today_drinking_time, null);
+    const todayAvg     = this._numVal(e.today_avg_time, null);
+    const barnError    = this._val(e.barn_door_error) === 'on';
+    const todayUnit    = this._unit(e.today_drinking_amount) || 'mL';
+    const yestUnit     = this._unit(e.yesterday_drinking_amount) || 'mL';
 
-    const cleanPct  = cleanDays !== null ? Math.min(100, (cleanDays  / cfg.cleaning_cycle_days) * 100) : null;
-    const filterPct = filterDays !== null ? Math.min(100, (filterDays / cfg.filter_cycle_days)  * 100) : null;
-    const batPct    = batteryPct !== null ? Math.min(100, Math.max(0, batteryPct)) : null;
-    const waterFill = waterPct  !== null ? Math.min(100, Math.max(0, waterPct)) : null;
+    const cleanPct  = cleanDays   !== null ? Math.min(100, (cleanDays   / cfg.cleaning_cycle_days) * 100) : null;
+    const filterPct = filterDays  !== null ? Math.min(100, (filterDays  / cfg.filter_cycle_days)   * 100) : null;
+    const batPct    = batteryPct  !== null ? Math.min(100, Math.max(0, batteryPct)) : null;
+    const waterFill = waterPct    !== null ? Math.min(100, Math.max(0, waterPct))   : null;
 
     const hasBattery = batPct !== null;
-    const hasWater   = waterFill !== null;
-    const hasClean   = cleanPct !== null;
-    const hasFilter  = filterPct !== null;
 
-    // ── Water wave SVG path ──────────────────────────────────────────────────
-    // fills from bottom; fill area = waterFill%
+    // ── Water wave SVG ───────────────────────────────────────────────────────
     const waveHtml = (fill) => {
       if (fill === null) return `<div class="water-no-data">No Data</div>`;
-      const fillH = Math.max(0, Math.min(100, fill)); // %
-      const yFill = 100 - fillH; // SVG viewBox 0–100, top of water
-      // two sine waves offset
-      const waveColor = this._waterColor(fill);
+      const fillH  = Math.max(0, Math.min(100, fill));
+      const yFill  = 100 - fillH;
+      const wc     = this._waterColor(fill);
+      const yBase  = yFill * 2;
       return `
         <svg viewBox="0 0 200 200" preserveAspectRatio="none" class="water-svg">
           <defs>
             <clipPath id="clip-wave">
-              <rect x="0" y="${yFill * 2}" width="200" height="${fillH * 2}"/>
+              <rect x="0" y="${yBase}" width="200" height="${fillH * 2}"/>
             </clipPath>
           </defs>
-          <!-- background fill -->
-          <rect x="0" y="${yFill * 2}" width="200" height="${fillH * 2}"
-                fill="${waveColor}" opacity="0.18"/>
-          <!-- animated wave -->
+          <rect x="0" y="${yBase}" width="200" height="${fillH * 2}" fill="${wc}" opacity="0.18"/>
           <g clip-path="url(#clip-wave)">
-            <path class="wave1" fill="${waveColor}" opacity="0.55"
-              d="M0,${yFill * 2 + 8}
-                 Q25,${yFill * 2} 50,${yFill * 2 + 8}
-                 Q75,${yFill * 2 + 16} 100,${yFill * 2 + 8}
-                 Q125,${yFill * 2} 150,${yFill * 2 + 8}
-                 Q175,${yFill * 2 + 16} 200,${yFill * 2 + 8}
-                 V200 H0 Z"/>
-            <path class="wave2" fill="${waveColor}" opacity="0.8"
-              d="M0,${yFill * 2 + 12}
-                 Q25,${yFill * 2 + 4} 50,${yFill * 2 + 12}
-                 Q75,${yFill * 2 + 20} 100,${yFill * 2 + 12}
-                 Q125,${yFill * 2 + 4} 150,${yFill * 2 + 12}
-                 Q175,${yFill * 2 + 20} 200,${yFill * 2 + 12}
-                 V200 H0 Z"/>
+            <path class="wave1" fill="${wc}" opacity="0.55"
+              d="M0,${yBase+8} Q25,${yBase} 50,${yBase+8} Q75,${yBase+16} 100,${yBase+8}
+                 Q125,${yBase} 150,${yBase+8} Q175,${yBase+16} 200,${yBase+8} V200 H0 Z"/>
+            <path class="wave2" fill="${wc}" opacity="0.8"
+              d="M0,${yBase+12} Q25,${yBase+4} 50,${yBase+12} Q75,${yBase+20} 100,${yBase+12}
+                 Q125,${yBase+4} 150,${yBase+12} Q175,${yBase+20} 200,${yBase+12} V200 H0 Z"/>
           </g>
-          <!-- percent label -->
-          <text x="100" y="${Math.max(yFill * 2 + 30, 30)}" text-anchor="middle"
+          <text x="100" y="${Math.max(yBase+30, 30)}" text-anchor="middle"
                 font-size="32" font-weight="bold"
                 fill="${fillH < 30 ? '#263238' : '#fff'}"
                 class="water-label">${Math.round(fill)}%</text>
         </svg>`;
     };
 
-    const bar = (pct, color, label, value) => {
+    // ── Bar helper ───────────────────────────────────────────────────────────
+    const bar = (pct, color, icon, label, value) => {
       if (pct === null) {
         return `
           <div class="bar-row">
-            <span class="bar-label">${label}</span>
+            <span class="bar-label">${icon} ${label}</span>
             <span class="bar-value muted">—</span>
           </div>`;
       }
       return `
         <div class="bar-row">
-          <span class="bar-label">${label}</span>
+          <span class="bar-label">${icon} ${label}</span>
           <span class="bar-value">${value}</span>
         </div>
         <div class="bar-track">
@@ -313,20 +296,43 @@ class PetlibroFountainCard extends HTMLElement {
         </div>`;
     };
 
-    const statRow = (icon, label, value, unit = '') => `
+    // ── Combined today/yesterday stat row ────────────────────────────────────
+    // Shows: icon | label | today-value | divider | yesterday-value
+    const dualStatRow = (icon, label, todayVal, yestVal, todayU = '', yestU = '') => {
+      const tv = todayVal !== null ? `${todayVal}${todayU ? ' ' + todayU : ''}` : '—';
+      const yv = yestVal  !== null ? `${yestVal}${yestU  ? ' ' + yestU  : ''}` : '—';
+      return `
+        <div class="stat-row dual">
+          <span class="stat-icon">${icon}</span>
+          <span class="stat-label">${label}</span>
+          <span class="stat-today">${tv}</span>
+          <span class="stat-sep">·</span>
+          <span class="stat-yest">${yv}</span>
+        </div>`;
+    };
+
+    // Single-value stat row (today only, no yesterday equivalent)
+    const statRow = (icon, label, value) => `
       <div class="stat-row">
         <span class="stat-icon">${icon}</span>
         <span class="stat-label">${label}</span>
-        <span class="stat-value">${value !== null ? `${value} ${unit}`.trim() : '—'}</span>
+        <span class="stat-today">${value !== null ? value : '—'}</span>
       </div>`;
 
+    // ── Reset button ─────────────────────────────────────────────────────────
     const resetBtn = (entityId, label, icon, color) => `
       <button class="reset-btn" data-entity="${entityId}"
               style="--btn-color:${color}" title="${label}">
         ${icon} ${label}
       </button>`;
 
-    // ── HTML ─────────────────────────────────────────────────────────────────
+    // ── Water status text ────────────────────────────────────────────────────
+    const waterStatus = waterFill === null ? 'No data'
+      : waterFill <= 15 ? '⚠ Water Low!'
+      : waterFill <= 35 ? 'Getting low'
+      : 'Good level';
+
+    // ─────────────────────────────────────────────────────────────────────────
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; }
@@ -339,7 +345,7 @@ class PetlibroFountainCard extends HTMLElement {
           box-shadow: var(--ha-card-box-shadow, 0 2px 12px rgba(0,0,0,.4));
         }
 
-        /* Header */
+        /* ── Header ── */
         .header {
           display: flex;
           align-items: center;
@@ -376,13 +382,16 @@ class PetlibroFountainCard extends HTMLElement {
         }
         .drop-icon { font-size: 1.3rem; }
 
-        /* Water level */
-        .water-section {
+        /* ── Top row: water circle + bars ── */
+        .top-row {
           display: flex;
-          gap: 14px;
+          gap: 16px;
+          align-items: flex-start;
           margin-bottom: 14px;
-          align-items: center;
         }
+
+        /* Water circle */
+        .water-col { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .water-container {
           width: 110px;
           height: 110px;
@@ -390,13 +399,9 @@ class PetlibroFountainCard extends HTMLElement {
           overflow: hidden;
           border: 3px solid #29b6f6;
           background: #102027;
-          flex-shrink: 0;
           position: relative;
         }
-        .water-svg {
-          width: 100%;
-          height: 100%;
-        }
+        .water-svg { width: 100%; height: 100%; }
         .water-label { font-family: inherit; }
         .wave1 { animation: shift1 3s ease-in-out infinite alternate; }
         .wave2 { animation: shift2 4s ease-in-out infinite alternate; }
@@ -413,36 +418,38 @@ class PetlibroFountainCard extends HTMLElement {
           display: flex; align-items: center; justify-content: center;
           font-size: .75rem; color: #78909c;
         }
-        .water-info { flex: 1; min-width: 0; }
-        .water-title {
-          font-size: .75rem;
-          color: #78909c;
-          margin-bottom: 6px;
-          text-transform: uppercase;
-          letter-spacing: .06em;
-        }
-        .water-subtitle {
-          font-size: .82rem;
+        .water-status {
+          font-size: .78rem;
           color: #90a4ae;
+          text-align: center;
         }
+        .water-status.warn { color: #ef5350; font-weight: 600; }
+        .water-status.low  { color: #ff9800; }
 
-        /* Progress bars */
-        .bars-section { margin-bottom: 14px; }
+        /* Bars column (right of circle) */
+        .bars-col {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding-top: 4px;
+        }
         .bar-row {
           display: flex;
           justify-content: space-between;
           align-items: baseline;
-          margin-bottom: 4px;
+          margin-bottom: 3px;
         }
-        .bar-label { font-size: .8rem; color: #90a4ae; }
-        .bar-value { font-size: .85rem; font-weight: 600; }
+        .bar-label { font-size: .78rem; color: #90a4ae; white-space: nowrap; }
+        .bar-value { font-size: .82rem; font-weight: 600; white-space: nowrap; }
         .bar-value.muted { color: #546e7a; }
         .bar-track {
           height: 6px;
           background: rgba(255,255,255,.08);
           border-radius: 4px;
           overflow: hidden;
-          margin-bottom: 10px;
+          margin-bottom: 9px;
         }
         .bar-fill {
           height: 100%;
@@ -450,15 +457,42 @@ class PetlibroFountainCard extends HTMLElement {
           transition: width .6s ease;
         }
 
-        /* Stats */
-        .stats-section { margin-bottom: 14px; }
+        /* ── Divider ── */
+        .divider {
+          height: 1px;
+          background: rgba(255,255,255,.07);
+          margin: 10px 0;
+        }
+
+        /* ── Stats section ── */
+        .stats-section { margin-bottom: 4px; }
+        .stats-header {
+          display: flex;
+          align-items: baseline;
+          gap: 0;
+          margin-bottom: 8px;
+        }
         .stats-title {
           font-size: .75rem;
           color: #78909c;
           text-transform: uppercase;
           letter-spacing: .06em;
-          margin-bottom: 8px;
+          flex: 1;
+          /* push past icon+label columns */
+          padding-left: calc(22px + 8px + 1px); /* icon width + gap */
         }
+        .stats-col-head {
+          font-size: .72rem;
+          color: #546e7a;
+          text-transform: uppercase;
+          letter-spacing: .05em;
+          width: 72px;
+          text-align: right;
+        }
+        .stats-col-head.today { color: #90a4ae; }
+        .stats-col-head.yest  { color: #546e7a; }
+        .stats-col-sep { width: 16px; text-align: center; color: #37474f; font-size: .7rem; }
+
         .stat-row {
           display: flex;
           align-items: center;
@@ -469,16 +503,17 @@ class PetlibroFountainCard extends HTMLElement {
         .stat-row:last-child { border-bottom: none; }
         .stat-icon { font-size: 1rem; width: 22px; text-align: center; flex-shrink: 0; }
         .stat-label { font-size: .83rem; color: #90a4ae; flex: 1; }
-        .stat-value { font-size: .9rem; font-weight: 600; }
+        .stat-today { font-size: .88rem; font-weight: 600; width: 72px; text-align: right; flex-shrink: 0; }
+        .stat-sep   { width: 16px; text-align: center; color: #37474f; font-size: .75rem; flex-shrink: 0; }
+        .stat-yest  { font-size: .82rem; color: #546e7a; width: 72px; text-align: right; flex-shrink: 0; }
 
-        /* Divider */
-        .divider {
-          height: 1px;
-          background: rgba(255,255,255,.07);
-          margin: 10px 0;
+        /* Rows without a yesterday value — no sep/yest columns */
+        .stat-row:not(.dual) .stat-today {
+          /* spans across sep+yest area */
+          width: calc(72px + 16px + 72px);
         }
 
-        /* Reset buttons */
+        /* ── Reset buttons ── */
         .reset-section { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
         .reset-btn {
           flex: 1;
@@ -494,16 +529,15 @@ class PetlibroFountainCard extends HTMLElement {
           transition: background .2s, color .2s;
           letter-spacing: .03em;
         }
-        .reset-btn:hover {
-          background: var(--btn-color);
-          color: #fff;
-        }
+        .reset-btn:hover  { background: var(--btn-color); color: #fff; }
         .reset-btn:active { opacity: .7; }
+        .reset-btn:disabled { opacity: .45; cursor: default; }
       </style>
 
       <ha-card>
         <div class="card">
-          <!-- Header -->
+
+          <!-- ── Header ── -->
           <div class="header">
             <span class="drop-icon">💧</span>
             <span class="header-title">${cfg.name}</span>
@@ -511,82 +545,110 @@ class PetlibroFountainCard extends HTMLElement {
             <div class="online-dot"></div>
           </div>
 
-          <!-- Water Level -->
-          <div class="water-section">
-            <div class="water-container">
-              ${waveHtml(waterFill)}
+          <!-- ── Top row: water circle LEFT, bars RIGHT ── -->
+          <div class="top-row">
+
+            <!-- Water circle -->
+            <div class="water-col">
+              <div class="water-container">
+                ${waveHtml(waterFill)}
+              </div>
+              <div class="water-status ${waterFill !== null && waterFill <= 15 ? 'warn' : waterFill !== null && waterFill <= 35 ? 'low' : ''}">
+                ${waterStatus}
+              </div>
             </div>
-            <div class="water-info">
-              <div class="water-title">Water Level</div>
-              ${waterFill !== null
-                ? `<div class="water-subtitle">${waterFill < 15 ? '⚠ Water Low!' : waterFill < 35 ? 'Getting low' : 'Good level'}</div>`
-                : `<div class="water-subtitle muted">No data</div>`}
+
+            <!-- Bars -->
+            <div class="bars-col">
+              ${hasBattery ? bar(
+                  batPct,
+                  this._batteryColor(batPct),
+                  '🔋', 'Battery',
+                  batteryState ? `${Math.round(batPct)}% · ${batteryState}` : `${Math.round(batPct)}%`
+                ) : ''}
+              ${bar(
+                  cleanPct,
+                  this._daysColor(cleanPct ?? 100),
+                  '🧹', 'Cleaning',
+                  cleanDays !== null ? `${Math.round(cleanDays)} days left` : null
+                )}
+              ${bar(
+                  filterPct,
+                  this._daysColor(filterPct ?? 100),
+                  '🔬', 'Filter',
+                  filterDays !== null ? `${Math.round(filterDays)} days left` : null
+                )}
             </div>
           </div>
 
           <div class="divider"></div>
 
-          <!-- Progress Bars -->
-          <div class="bars-section">
-            ${hasBattery ? bar(batPct, this._batteryColor(batPct),
-                '🔋 Battery',
-                batteryState ? `${Math.round(batPct)}% · ${batteryState}` : `${Math.round(batPct)}%`)
-              : ''}
-            ${bar(cleanPct, this._daysColor(cleanPct),
-                '🧹 Cleaning',
-                cleanDays !== null ? `${Math.round(cleanDays)} days left` : null)}
-            ${bar(filterPct, this._daysColor(filterPct),
-                '🔬 Filter',
-                filterDays !== null ? `${Math.round(filterDays)} days left` : null)}
-          </div>
-
-          <div class="divider"></div>
-
-          <!-- Today's Stats -->
+          <!-- ── Drinking stats: Today + Yesterday inline ── -->
           <div class="stats-section">
-            <div class="stats-title">Today</div>
-            ${statRow('💧', 'Water consumed', todayAmount !== null ? Math.round(todayAmount) : null, todayUnit)}
-            ${statRow('🐾', 'Drinking sessions', todayCount, '')}
-            ${statRow('⏱', 'Total drink time', todayTime !== null ? this._formatSeconds(todayTime) : null)}
-            ${statRow('📊', 'Avg session length', todayAvg !== null ? this._formatSeconds(todayAvg) : null)}
+            <!-- Column headers -->
+            <div class="stats-header">
+              <div class="stats-title">Today / Yesterday</div>
+              <div class="stats-col-head today">Today</div>
+              <div class="stats-col-sep"></div>
+              <div class="stats-col-head yest">Yest.</div>
+            </div>
+
+            <!-- Water consumed: today vs yesterday -->
+            ${dualStatRow(
+                '💧', 'Water consumed',
+                todayAmount !== null ? Math.round(todayAmount) : null, todayUnit,
+                yestAmount  !== null ? Math.round(yestAmount)  : null, yestUnit
+              )}
+
+            <!-- Drinking sessions: today vs yesterday -->
+            ${dualStatRow(
+                '🐾', 'Drinking sessions',
+                todayCount, '',
+                yestCount, ''
+              )}
+
+            <!-- Total drink time: today only -->
+            ${statRow(
+                '⏱', 'Total drink time',
+                todayTime !== null ? this._formatSeconds(todayTime) : null
+              )}
+
+            <!-- Average session: today only -->
+            ${statRow(
+                '📊', 'Avg session length',
+                todayAvg !== null ? this._formatSeconds(todayAvg) : null
+              )}
           </div>
 
-          <div class="divider"></div>
-
-          <!-- Yesterday's Stats -->
-          <div class="stats-section">
-            <div class="stats-title">Yesterday</div>
-            ${statRow('💧', 'Water consumed', yestAmount !== null ? Math.round(yestAmount) : null, yestUnit)}
-            ${statRow('🐾', 'Drinking sessions', yestCount, '')}
-          </div>
-
+          <!-- ── Reset buttons (optional) ── -->
           ${cfg.show_reset_buttons ? `
             <div class="divider"></div>
             <div class="reset-section">
               ${resetBtn(e.cleaning_reset, 'Cleaning Reset', '🧹', '#26c6da')}
               ${resetBtn(e.filter_reset,   'Filter Reset',   '🔬', '#7e57c2')}
             </div>` : ''}
+
         </div>
       </ha-card>
     `;
 
-    // Attach reset button listeners
+    // ── Reset button listeners ────────────────────────────────────────────────
     this.shadowRoot.querySelectorAll('.reset-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const entityId = btn.dataset.entity;
-        const label = btn.textContent.trim();
         btn.disabled = true;
-        btn.style.opacity = '0.5';
+        const orig = btn.innerHTML;
+        btn.innerHTML = '⏳ Resetting…';
         await this._pressButton(entityId);
         setTimeout(() => {
           btn.disabled = false;
-          btn.style.opacity = '1';
+          btn.innerHTML = orig;
         }, 3000);
       });
     });
   }
 
-  getCardSize() { return 6; }
+  getCardSize() { return 5; }
 
   static getConfigElement() { return document.createElement('div'); }
 
@@ -606,6 +668,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type:        'petlibro-fountain-card',
   name:        'Petlibro Fountain Card',
-  description: 'Status card for Petlibro Dockstream water fountains',
+  description: 'Status card for Petlibro Dockstream water fountains (PLWF116)',
   preview:     false,
 });
